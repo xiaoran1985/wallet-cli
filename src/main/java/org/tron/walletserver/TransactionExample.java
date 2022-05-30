@@ -52,14 +52,15 @@ public class TransactionExample {
 
   /**
    * 转账trx
-   * @param ownerAddress  原地址
-   * @param toAddress     目标地址
-   * @param amount        转账金额
+   *
+   * @param ownerAddress 原地址
+   * @param toAddress    目标地址
+   * @param amount       转账金额
    * @return
    */
-  public boolean transferTrx(String ownerAddress,String toAddress,Long amount) throws Exception{
+  public boolean transferTrx(String ownerAddress, String toAddress, Long amount) throws Exception {
     //数据校验
-    if(StringUtil.isNullOrEmpty(ownerAddress) || StringUtil.isNullOrEmpty(toAddress)){
+    if (StringUtil.isNullOrEmpty(ownerAddress) || StringUtil.isNullOrEmpty(toAddress)) {
       logger.error("转账地址错误");
       return false;
     }
@@ -69,12 +70,12 @@ public class TransactionExample {
     byte[] owner = WalletApi.decodeFromBase58Check(ownerAddress);
     byte[] to = WalletApi.decodeFromBase58Check(toAddress);
     //生成合约
-    BalanceContract.TransferContract contract = createContract(owner,to,amount);
+    BalanceContract.TransferContract contract = createContract(owner, to, amount);
     //配置文件中版本是2，使用对应方法转账
     GrpcAPI.TransactionExtention extention = rpcCli.createTransaction2(contract);
     //验证返回结果
     boolean validResult = validTransaction(extention);
-    if(validResult == false){
+    if (validResult == false) {
       logger.error("转账结果验证失败");
       return validResult;
     }
@@ -86,7 +87,7 @@ public class TransactionExample {
   }
 
   private void signAndPrint(Protocol.Transaction transaction) throws
-          CipherException, IOException, CancelException{
+          CipherException, IOException, CancelException {
     //打印
     System.out.println(Utils.printTransactionExceptId(transaction));
     System.out.println("before sign transaction hex string is " + ByteArray.toHexString(transaction.toByteArray()));
@@ -102,12 +103,13 @@ public class TransactionExample {
 
   /**
    * 创建合约
-   * @param owner   所有方
-   * @param to      接收方
-   * @param amount  金额，单位sun
+   *
+   * @param owner  所有方
+   * @param to     接收方
+   * @param amount 金额，单位sun
    * @return
    */
-  private BalanceContract.TransferContract createContract(byte[] owner,byte[] to,long amount){
+  private BalanceContract.TransferContract createContract(byte[] owner, byte[] to, long amount) {
     BalanceContract.TransferContract.Builder builder = BalanceContract.TransferContract.newBuilder();
     //所有人地址
     ByteString ownerString = ByteString.copyFrom(owner);
@@ -123,10 +125,11 @@ public class TransactionExample {
 
   /**
    * 验证返回结果
+   *
    * @param transaction
    * @return
    */
-  private boolean validTransaction(GrpcAPI.TransactionExtention transaction){
+  private boolean validTransaction(GrpcAPI.TransactionExtention transaction) {
     if (transaction == null) {
       return false;
     }
@@ -151,6 +154,7 @@ public class TransactionExample {
 
   /**
    * 签名
+   *
    * @param transaction
    * @return
    * @throws CipherException
@@ -171,10 +175,11 @@ public class TransactionExample {
 
   /**
    * 获取私钥
+   *
    * @return
    * @throws CipherException
    */
-  private ECKey getEcKey() throws IOException,CipherException {
+  private ECKey getEcKey() throws IOException, CipherException {
     String priK = "";
     byte[] privateKey = ByteArray.fromHexString(priK);
     ECKey ecKey = ECKey.fromPrivate(privateKey);
@@ -189,6 +194,7 @@ public class TransactionExample {
 
   /**
    * 转账TRC10
+   *
    * @param ownerAddr
    * @param toAddr
    * @param assetName
@@ -196,19 +202,19 @@ public class TransactionExample {
    * @return
    * @throws Exception
    */
-  public boolean transferTrc10(String ownerAddr,String toAddr,String assetName,Long amount)
+  public boolean transferTrc10(String ownerAddr, String toAddr, String assetName, Long amount)
           throws Exception {
     //地址转换为base58格式
     byte[] owner = WalletApi.decodeFromBase58Check(ownerAddr);
     byte[] to = WalletApi.decodeFromBase58Check(toAddr);
-    AssetIssueContractOuterClass.TransferAssetContract assetContract = createTransferAssetContract(owner,to,assetName,amount);
+    AssetIssueContractOuterClass.TransferAssetContract assetContract = createTransferAssetContract(owner, to, assetName, amount);
 
     //配置版本是2，使用对应方法转账
     GrpcAPI.TransactionExtention extention = rpcCli.createTransferAssetTransaction2(assetContract);
 
     //验证返回结果
     boolean validResult = validTransaction(extention);
-    if(validResult == false){
+    if (validResult == false) {
       logger.error("转账结果验证失败");
       return validResult;
     }
@@ -221,6 +227,7 @@ public class TransactionExample {
 
   /**
    * 生成合约
+   *
    * @param owner
    * @param to
    * @param assetName
@@ -228,7 +235,7 @@ public class TransactionExample {
    * @return
    */
   private AssetIssueContractOuterClass.TransferAssetContract createTransferAssetContract(byte[] owner,
-            byte[] to,String assetName,Long amount){
+                                                                                         byte[] to, String assetName, Long amount) {
     AssetIssueContractOuterClass.TransferAssetContract.Builder builder = AssetIssueContractOuterClass.TransferAssetContract.newBuilder();
     builder.setAmount(amount);
     builder.setOwnerAddress(ByteString.copyFrom(owner));
