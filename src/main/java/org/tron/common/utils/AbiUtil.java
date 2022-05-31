@@ -350,6 +350,8 @@ public class AbiUtil {
     }
     byte[] encodedParms = encodeInput(methodSign, input);
 
+    System.out.println("encodedParms:" + Hex.toHexString(encodedParms));
+    System.out.println("selector:" + Hex.toHexString(selector));
     return Hex.toHexString(selector) + Hex.toHexString(encodedParms);
   }
 
