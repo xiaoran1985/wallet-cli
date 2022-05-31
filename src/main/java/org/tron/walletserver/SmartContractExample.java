@@ -1,12 +1,14 @@
 package org.tron.walletserver;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import com.google.protobuf.ByteString;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.encoders.Hex;
 import org.tron.api.GrpcAPI;
 import org.tron.common.crypto.ECKey;
+import org.tron.common.crypto.Hash;
 import org.tron.common.crypto.Sha256Sm3Hash;
 import org.tron.common.utils.AbiUtil;
 import org.tron.common.utils.ByteArray;
@@ -83,7 +85,23 @@ public class SmartContractExample {
     //sign and print log and broadcast
     Protocol.Transaction transaction = transactionExtention.getTransaction();
 
+    //print smart contract address
+    byte[] contractAddress = generateContractAddress(owner,transaction);
+    System.out.println("contract address:" + WalletApi.encode58Check(contractAddress));
+
     return signAndBroadcast(transaction);
+  }
+
+  private byte[] generateContractAddress(byte[] ownerAddress, Protocol.Transaction trx) {
+    // get tx hash
+    byte[] txRawDataHash = Sha256Sm3Hash.of(trx.getRawData().toByteArray()).getBytes();
+
+    // combine
+    byte[] combined = new byte[txRawDataHash.length + ownerAddress.length];
+    System.arraycopy(txRawDataHash, 0, combined, 0, txRawDataHash.length);
+    System.arraycopy(ownerAddress, 0, combined, txRawDataHash.length, ownerAddress.length);
+
+    return Hash.sha3omit12(combined);
   }
 
   private boolean signAndBroadcast(Protocol.Transaction transaction) throws
@@ -207,9 +225,11 @@ public class SmartContractExample {
 
     //sign and print log and broadcast
     Protocol.Transaction transaction = transactionExtention.getTransaction();
-
+    //txId : ByteArray.toHexString(Sha256Sm3Hash.hash(transaction.getRawData().toByteArray()));
+    //print result
+    String result = transactionExtention.getResult().getMessage().toStringUtf8();
+    System.out.println("sum result:" + result);
     return signAndBroadcast(transaction);
-
   }
 
   /**
