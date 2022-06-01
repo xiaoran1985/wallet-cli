@@ -1,78 +1,113 @@
 package org.tron.walletserver;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.protobuf.ByteString;
-import lombok.extern.slf4j.Slf4j;
 import org.tron.api.GrpcAPI;
 import org.tron.common.crypto.ECKey;
 import org.tron.common.crypto.Sha256Sm3Hash;
 import org.tron.common.utils.ByteArray;
 import org.tron.common.utils.TransactionUtils;
 import org.tron.common.utils.Utils;
-import org.tron.core.config.Parameter;
 import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
-import org.tron.protos.contract.AccountContract;
+import org.tron.protos.contract.WitnessContract;
 
 /**
  * Created by Lidonglei on 2022/6/1.
  */
-@Slf4j
 @SuppressWarnings("Duplicates")
-public class ContractExample {
+public class WitnessContractExample {
+
   private static GrpcClient rpcCli = WalletApi.init();
 
-
   public static void main(String[] args) {
-    ContractExample example = new ContractExample();
+    WitnessContractExample example = new WitnessContractExample();
     String ownerAddress = "TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F";
     try {
-      //create account
-      boolean isCreated = example.createAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("create account result:" + isCreated);
+      //vote invoke
+//      boolean isVote = example.vote(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("Vote result:" + isVote);
+      //create witness
+      boolean isCreateWitness = example.createWitness(WalletApi.decodeFromBase58Check(ownerAddress));
+      System.out.println("create witness result:" + isCreateWitness);
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
-    System.out.println("method done");
+    System.out.println("witness execute done");
   }
 
   /**
-   * create account
-   *
+   * vote sr
    * @param owner
    * @return
    * @throws Exception
    */
-  public boolean createAccount(byte[] owner) throws Exception {
-    GrpcAPI.EmptyMessage.Builder builder = GrpcAPI.EmptyMessage.newBuilder();
-    GrpcAPI.AddressPrKeyPairMessage pairMessage = rpcCli.generateAddress(builder.build());
-    System.out.println("pairMessage:" + pairMessage);
-    byte[] account = WalletApi.decodeFromBase58Check(pairMessage.getAddress());
-    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createAccount2(generateAccountContract(owner, account));
-
-    boolean valid = validTransaction(transactionExtention);
-    if (!valid) {
-      System.out.println("create account do not valid pass");
+  public boolean vote(byte[] owner) throws Exception {
+    //init vote
+    HashMap<String, Long> voteMap = new HashMap<>();
+    voteMap.put("TPffmvjxEcvZefQqS7QYvL1Der3uiguikE", 3L);
+    voteMap.put("TFFLWM7tmKiwGtbh2mcz2rBssoFjHjSShG", 1L);
+    WitnessContract.VoteWitnessContract contract = generateVoteContract(owner, voteMap);
+    //invoke
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.voteWitnessAccount2(contract);
+    //verify transaction
+    if (!validTransaction(transactionExtention)) {
+      System.out.println("do not success");
       return false;
     }
-    System.out.println("account address:" + pairMessage.getAddress());
+    System.out.println("transaction result:" + transactionExtention.getResult());
     return signAndBroadcast(transactionExtention.getTransaction());
   }
 
   /**
-   * generate account contract
-   *
+   * generate vote contract
    * @param owner
-   * @param account
+   * @param voteMap
    * @return
    */
-  private AccountContract.AccountCreateContract generateAccountContract(byte[] owner, byte[] account) {
-    AccountContract.AccountCreateContract.Builder builder = AccountContract.AccountCreateContract.newBuilder();
+  private WitnessContract.VoteWitnessContract generateVoteContract(byte[] owner, HashMap<String, Long> voteMap) {
+    WitnessContract.VoteWitnessContract.Builder builder = WitnessContract.VoteWitnessContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
-    builder.setAccountAddress(ByteString.copyFrom(account));
-    builder.setType(Protocol.AccountType.Normal);
+    //key:address,value:vote count
+    for (Map.Entry<String, Long> entry : voteMap.entrySet()) {
+      WitnessContract.VoteWitnessContract.Vote.Builder voteBuilder = WitnessContract.VoteWitnessContract.Vote.newBuilder();
+      //do not verify address,because default value exist
+      voteBuilder.setVoteAddress(ByteString.copyFrom(WalletApi.decodeFromBase58Check(entry.getKey())));
+      voteBuilder.setVoteCount(entry.getValue());
+      builder.addVotes(voteBuilder.build());
+    }
+    return builder.build();
+  }
+
+
+  /**
+   * create sr
+   * @param owner
+   * @return
+   */
+  public boolean createWitness(byte[] owner) throws Exception {
+    //create contract
+    WitnessContract.WitnessCreateContract contract = generateWitnessContract(owner,"www.baidu.com");
+    //invoke rpc
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createWitness2(contract);
+    //verify
+    if(!validTransaction(transactionExtention)){
+      System.out.println("valid failed");
+      return false;
+    }
+    //print transaction
+    System.out.println("transactionExtention : " + transactionExtention);
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private WitnessContract.WitnessCreateContract generateWitnessContract(byte[] owner,String url){
+    WitnessContract.WitnessCreateContract.Builder builder = WitnessContract.WitnessCreateContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setUrl(ByteString.copyFrom(url.getBytes()));
     return builder.build();
   }
 
@@ -99,7 +134,7 @@ public class ContractExample {
   }
 
   /**
-   * 验证返回结果
+   * verify transaction
    *
    * @param transaction
    * @return
@@ -155,10 +190,9 @@ public class ContractExample {
    * @throws CipherException
    */
   private ECKey getEcKey() throws IOException, CipherException {
-    String priK = "";
+    String priK = "1edbbc868af9ac01260e9322c340c1d6ddfc1db972a6e56cb4c4cbf98bc4c4da";
     byte[] privateKey = ByteArray.fromHexString(priK);
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;
   }
-
 }
