@@ -1,4 +1,4 @@
-package org.tron.walletserver;
+package org.tron.walletserver.example;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -15,6 +15,8 @@ import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
 import org.tron.protos.contract.WitnessContract;
+import org.tron.walletserver.GrpcClient;
+import org.tron.walletserver.WalletApi;
 
 /**
  * Created by Lidonglei on 2022/6/1.

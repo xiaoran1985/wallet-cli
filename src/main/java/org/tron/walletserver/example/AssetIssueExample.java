@@ -1,9 +1,8 @@
-package org.tron.walletserver;
+package org.tron.walletserver.example;
 
 import java.io.IOException;
 
 import com.google.protobuf.ByteString;
-import lombok.extern.slf4j.Slf4j;
 import org.tron.api.GrpcAPI;
 import org.tron.common.crypto.ECKey;
 import org.tron.common.crypto.Sha256Sm3Hash;
@@ -13,95 +12,116 @@ import org.tron.common.utils.Utils;
 import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
-import org.tron.protos.contract.AccountContract;
+import org.tron.protos.contract.AssetIssueContractOuterClass;
+import org.tron.walletserver.GrpcClient;
+import org.tron.walletserver.WalletApi;
 
 /**
  * Created by Lidonglei on 2022/6/1.
  */
-@Slf4j
 @SuppressWarnings("Duplicates")
-public class ContractExample {
+public class AssetIssueExample {
   private static GrpcClient rpcCli = WalletApi.init();
 
-
   public static void main(String[] args) {
-    ContractExample example = new ContractExample();
+    AssetIssueExample example = new AssetIssueExample();
     String ownerAddress = "TCjuQbm5yab7ENTYb7tbdAKaiNa9Lrj4mo";
     try {
-      //create account
-//      boolean isCreated = example.createAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-//      System.out.println("create account result:" + isCreated);
-      //update account
-      boolean isUpdate = example.updateAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("update account result:" + isUpdate);
+      //create asset invoke
+//      boolean isPublish = example.publishAssetIssue(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("Publish result:" + isPublish);
+      //buy asset invoke
+      boolean isBuy = example.buyAssetIssue(WalletApi.decodeFromBase58Check(ownerAddress));
+      System.out.println("buy result:" + isBuy);
+
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
-    System.out.println("method done");
+    System.out.println("asset issue execute done");
   }
 
   /**
-   * create account
-   *
+   * create asset issue
    * @param owner
    * @return
    * @throws Exception
    */
-  public boolean createAccount(byte[] owner) throws Exception {
-    GrpcAPI.EmptyMessage.Builder builder = GrpcAPI.EmptyMessage.newBuilder();
-    GrpcAPI.AddressPrKeyPairMessage pairMessage = rpcCli.generateAddress(builder.build());
-    System.out.println("pairMessage:" + pairMessage);
-    byte[] account = WalletApi.decodeFromBase58Check(pairMessage.getAddress());
-    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createAccount2(generateAccountContract(owner, account));
-
-    boolean valid = validTransaction(transactionExtention);
-    if (!valid) {
-      System.out.println("create account do not valid pass");
+  public boolean publishAssetIssue(byte[] owner) throws Exception {
+    AssetIssueContractOuterClass.AssetIssueContract contract = generateAssetIssueContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createAssetIssue2(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("create asset result failed");
       return false;
     }
-    System.out.println("account address:" + pairMessage.getAddress());
+    System.out.println("transaction result:" + transactionExtention.getResult());
+
     return signAndBroadcast(transactionExtention.getTransaction());
   }
 
   /**
-   * generate account contract
-   *
+   * generate asset issue
    * @param owner
-   * @param account
    * @return
    */
-  private AccountContract.AccountCreateContract generateAccountContract(byte[] owner, byte[] account) {
-    AccountContract.AccountCreateContract.Builder builder = AccountContract.AccountCreateContract.newBuilder();
+  private AssetIssueContractOuterClass.AssetIssueContract generateAssetIssueContract(byte[] owner){
+    AssetIssueContractOuterClass.AssetIssueContract.Builder builder = AssetIssueContractOuterClass.AssetIssueContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
-    builder.setAccountAddress(ByteString.copyFrom(account));
-    builder.setType(Protocol.AccountType.Normal);
+    //不能是中文
+    builder.setName(ByteString.copyFrom("asset_issue_token_test_1".getBytes()));
+    builder.setAbbr(ByteString.copyFrom("AIT1".getBytes()));
+    builder.setTotalSupply(10000);
+
+    AssetIssueContractOuterClass.AssetIssueContract.FrozenSupply.Builder frozenBuilder = AssetIssueContractOuterClass.AssetIssueContract.FrozenSupply.newBuilder();
+    frozenBuilder.setFrozenAmount(100);
+    frozenBuilder.setFrozenDays(5);
+    builder.addFrozenSupply(frozenBuilder.build());
+
+    AssetIssueContractOuterClass.AssetIssueContract.FrozenSupply.Builder frozenBuilder1 = AssetIssueContractOuterClass.AssetIssueContract.FrozenSupply.newBuilder();
+    frozenBuilder1.setFrozenAmount(400);
+    frozenBuilder1.setFrozenDays(5);
+    builder.addFrozenSupply(frozenBuilder1.build());
+
+    builder.setTrxNum(1000);
+    builder.setNum(10000);
+    builder.setStartTime(1654099200000L);
+    builder.setEndTime(1656604800000L);
+    builder.setDescription(ByteString.copyFrom("测试创建资产描述".getBytes()));
+    builder.setUrl(ByteString.copyFrom("www.tronscan.io".getBytes()));
+    builder.setFreeAssetNetLimit(100);
+    builder.setPublicFreeAssetNetLimit(100000);
+
     return builder.build();
   }
 
 
   /**
-   * update account name
+   * buy asset issue
    * @param owner
    * @return
    * @throws Exception
    */
-  public boolean updateAccount(byte[] owner) throws Exception {
-    AccountContract.AccountUpdateContract contract = generateUpdateAccountContract(owner);
-    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createTransaction2(contract);
-
-    boolean valid = validTransaction(transactionExtention);
-    if (!valid) {
-      System.out.println("update account do not valid pass");
+  public boolean buyAssetIssue(byte[] owner) throws Exception {
+    AssetIssueContractOuterClass.ParticipateAssetIssueContract contract = generateParticipateAsset(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createParticipateAssetIssueTransaction2(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("buy asset failed");
       return false;
     }
 
     return signAndBroadcast(transactionExtention.getTransaction());
   }
 
-  private AccountContract.AccountUpdateContract generateUpdateAccountContract(byte[] owner){
-    AccountContract.AccountUpdateContract.Builder builder = AccountContract.AccountUpdateContract.newBuilder();
+  /**
+   *
+   * @param owner
+   * @return
+   */
+  private AssetIssueContractOuterClass.ParticipateAssetIssueContract generateParticipateAsset(byte[] owner){
+    AssetIssueContractOuterClass.ParticipateAssetIssueContract.Builder builder = AssetIssueContractOuterClass.ParticipateAssetIssueContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
-    builder.setAccountName(ByteString.copyFrom("修改账号名测试".getBytes()));
+    builder.setToAddress(ByteString.copyFrom(WalletApi.decodeFromBase58Check("TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F")));
+    builder.setAmount(1000000);//sun
+    builder.setAssetName(ByteString.copyFrom("asset_issue_token_test_1".getBytes()));
     return builder.build();
   }
 
@@ -128,7 +148,7 @@ public class ContractExample {
   }
 
   /**
-   * 验证返回结果
+   * verify transaction
    *
    * @param transaction
    * @return
@@ -189,5 +209,4 @@ public class ContractExample {
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;
   }
-
 }
