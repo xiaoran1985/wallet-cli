@@ -32,8 +32,11 @@ public class WitnessContractExample {
 //      boolean isVote = example.vote(WalletApi.decodeFromBase58Check(ownerAddress));
 //      System.out.println("Vote result:" + isVote);
       //create witness
-      boolean isCreateWitness = example.createWitness(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("create witness result:" + isCreateWitness);
+//      boolean isCreateWitness = example.createWitness(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("create witness result:" + isCreateWitness);
+      //update witness
+      boolean isUpdate = example.updateWitness(WalletApi.decodeFromBase58Check(ownerAddress),"www.tronscan.io");
+      System.out.println("update witness result:" + isUpdate);
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
@@ -108,6 +111,29 @@ public class WitnessContractExample {
     WitnessContract.WitnessCreateContract.Builder builder = WitnessContract.WitnessCreateContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
     builder.setUrl(ByteString.copyFrom(url.getBytes()));
+    return builder.build();
+  }
+
+  /**
+   * update witness
+   * @param owner
+   * @param url
+   * @return
+   */
+  public boolean updateWitness(byte[] owner,String url) throws Exception {
+    WitnessContract.WitnessUpdateContract contract = generateUpdateContract(owner, url);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.updateWitness2(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("update witness failed");
+      return false;
+    }
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private WitnessContract.WitnessUpdateContract generateUpdateContract(byte[] owner,String url){
+    WitnessContract.WitnessUpdateContract.Builder builder = WitnessContract.WitnessUpdateContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setUpdateUrl(ByteString.copyFrom(url.getBytes()));
     return builder.build();
   }
 
@@ -190,7 +216,7 @@ public class WitnessContractExample {
    * @throws CipherException
    */
   private ECKey getEcKey() throws IOException, CipherException {
-    String priK = "1edbbc868af9ac01260e9322c340c1d6ddfc1db972a6e56cb4c4cbf98bc4c4da";
+    String priK = "";
     byte[] privateKey = ByteArray.fromHexString(priK);
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;

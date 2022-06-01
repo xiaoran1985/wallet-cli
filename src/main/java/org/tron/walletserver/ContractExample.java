@@ -10,7 +10,6 @@ import org.tron.common.crypto.Sha256Sm3Hash;
 import org.tron.common.utils.ByteArray;
 import org.tron.common.utils.TransactionUtils;
 import org.tron.common.utils.Utils;
-import org.tron.core.config.Parameter;
 import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
@@ -27,11 +26,14 @@ public class ContractExample {
 
   public static void main(String[] args) {
     ContractExample example = new ContractExample();
-    String ownerAddress = "TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F";
+    String ownerAddress = "TCjuQbm5yab7ENTYb7tbdAKaiNa9Lrj4mo";
     try {
       //create account
-      boolean isCreated = example.createAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("create account result:" + isCreated);
+//      boolean isCreated = example.createAccount(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("create account result:" + isCreated);
+      //update account
+      boolean isUpdate = example.updateAccount(WalletApi.decodeFromBase58Check(ownerAddress));
+      System.out.println("update account result:" + isUpdate);
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
@@ -73,6 +75,33 @@ public class ContractExample {
     builder.setOwnerAddress(ByteString.copyFrom(owner));
     builder.setAccountAddress(ByteString.copyFrom(account));
     builder.setType(Protocol.AccountType.Normal);
+    return builder.build();
+  }
+
+
+  /**
+   * update account name
+   * @param owner
+   * @return
+   * @throws Exception
+   */
+  public boolean updateAccount(byte[] owner) throws Exception {
+    AccountContract.AccountUpdateContract contract = generateUpdateAccountContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createTransaction2(contract);
+
+    boolean valid = validTransaction(transactionExtention);
+    if (!valid) {
+      System.out.println("update account do not valid pass");
+      return false;
+    }
+
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private AccountContract.AccountUpdateContract generateUpdateAccountContract(byte[] owner){
+    AccountContract.AccountUpdateContract.Builder builder = AccountContract.AccountUpdateContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setAccountName(ByteString.copyFrom("修改账号名测试".getBytes()));
     return builder.build();
   }
 
