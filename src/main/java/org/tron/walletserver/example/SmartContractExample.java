@@ -42,7 +42,10 @@ public class SmartContractExample {
 //      boolean trigger = example.triggerSumContract();
 //      System.out.println("trigger result: " + trigger);
       //update smart contract
-      boolean update = example.updateSmartContract();
+//      boolean update = example.updateSmartContract();
+//      System.out.println("update result: " + update);
+      //update energy limit
+      boolean update = example.updateEnergyLimit();
       System.out.println("update result: " + update);
     } catch (Exception e) {
       System.out.println("failed. msg: " + e);
@@ -151,7 +154,7 @@ public class SmartContractExample {
    * @throws CipherException
    */
   private ECKey getEcKey() throws IOException, CipherException {
-    String priK = "1edbbc868af9ac01260e9322c340c1d6ddfc1db972a6e56cb4c4cbf98bc4c4da";//clear private key
+    String priK = "";//clear private key
     byte[] privateKey = ByteArray.fromHexString(priK);
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;
@@ -273,6 +276,31 @@ public class SmartContractExample {
     builder.setOwnerAddress(ByteString.copyFrom(owner));
     builder.setContractAddress(ByteString.copyFrom(contractAddress));
     builder.setConsumeUserResourcePercent(55);
+    return builder.build();
+  }
+
+
+  /**
+   * update energy limit contract
+   * @return
+   * @throws Exception
+   */
+  public boolean updateEnergyLimit() throws Exception {
+    SmartContractOuterClass.UpdateEnergyLimitContract contract = generateUpdateEnergyLimit();
+
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.updateEnergyLimit(contract);
+
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private SmartContractOuterClass.UpdateEnergyLimitContract generateUpdateEnergyLimit(){
+    String contractAddr = "TDR2QbmiN1JqjuK7SvXBrEssHsMThYj4Uu";
+    byte[] contractAddress = WalletApi.decodeFromBase58Check(contractAddr);
+    byte[] owner = WalletApi.decodeFromBase58Check("TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F");
+    SmartContractOuterClass.UpdateEnergyLimitContract.Builder builder = SmartContractOuterClass.UpdateEnergyLimitContract.newBuilder();
+    builder.setContractAddress(ByteString.copyFrom(contractAddress));
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setOriginEnergyLimit(666);
     return builder.build();
   }
 }

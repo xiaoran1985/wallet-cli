@@ -13,6 +13,7 @@ import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
 import org.tron.protos.contract.AssetIssueContractOuterClass;
+import org.tron.protos.contract.StorageContract;
 import org.tron.walletserver.GrpcClient;
 import org.tron.walletserver.WalletApi;
 
@@ -37,8 +38,11 @@ public class AssetIssueExample {
 //      boolean isUnFreeze = example.unFreezeAssetIssue(WalletApi.decodeFromBase58Check(ownerAddress));
 //      System.out.println("isUnFreeze result:" + isUnFreeze);
       //update asset
-      boolean isUpdate = example.updateAssetIssue(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("update result:" + isUpdate);
+//      boolean isUpdate = example.updateAssetIssue(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("update result:" + isUpdate);
+      //update brokerage
+      boolean isUpdate = example.updateBrokerage(WalletApi.decodeFromBase58Check("TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F"));
+      System.out.println("update brokerage result:" + isUpdate);
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
@@ -179,6 +183,30 @@ public class AssetIssueExample {
     builder.setDescription(ByteString.copyFrom("测试修改".getBytes()));
     builder.setUrl(ByteString.copyFrom("token/1004852/transfers".getBytes()));
     builder.setNewLimit(50);
+    return builder.build();
+  }
+
+  /**
+   * update brokerage
+   * @param owner
+   * @return
+   * @throws Exception
+   */
+  public boolean updateBrokerage(byte[] owner) throws Exception {
+    StorageContract.UpdateBrokerageContract contract = generateBrokerageContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.updateBrokerage(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("update asset failed");
+      return false;
+    }
+
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private StorageContract.UpdateBrokerageContract generateBrokerageContract(byte[] owner){
+    StorageContract.UpdateBrokerageContract.Builder builder = StorageContract.UpdateBrokerageContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setBrokerage(50);
     return builder.build();
   }
 
