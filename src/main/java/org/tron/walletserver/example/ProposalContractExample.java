@@ -1,9 +1,10 @@
 package org.tron.walletserver.example;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.protobuf.ByteString;
-import lombok.extern.slf4j.Slf4j;
 import org.tron.api.GrpcAPI;
 import org.tron.common.crypto.ECKey;
 import org.tron.common.crypto.Sha256Sm3Hash;
@@ -13,122 +14,112 @@ import org.tron.common.utils.Utils;
 import org.tron.core.exception.CancelException;
 import org.tron.core.exception.CipherException;
 import org.tron.protos.Protocol;
-import org.tron.protos.contract.AccountContract;
+import org.tron.protos.contract.ProposalContract;
 import org.tron.walletserver.GrpcClient;
 import org.tron.walletserver.WalletApi;
 
 /**
- * Created by Lidonglei on 2022/6/1.
+ * Created by Lidonglei on 2022/6/2.
  */
-@Slf4j
 @SuppressWarnings("Duplicates")
-public class ContractExample {
+public class ProposalContractExample {
+
   private static GrpcClient rpcCli = WalletApi.init();
 
-
   public static void main(String[] args) {
-    ContractExample example = new ContractExample();
-    String ownerAddress = "TCjuQbm5yab7ENTYb7tbdAKaiNa9Lrj4mo";
+    ProposalContractExample example = new ProposalContractExample();
+    String ownerAddress = "TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F";
     try {
-      //create account
-//      boolean isCreated = example.createAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-//      System.out.println("create account result:" + isCreated);
-      //update account
-//      boolean isUpdate = example.updateAccount(WalletApi.decodeFromBase58Check(ownerAddress));
-//      System.out.println("update account result:" + isUpdate);
-      //set account id
-      boolean isSet = example.setAccountId(WalletApi.decodeFromBase58Check(ownerAddress));
-      System.out.println("set account id result:" + isSet);
+      //create
+//      boolean isCreate = example.createProposal(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("create result:" + isCreate);
+      //approve
+//      boolean isApprove = example.approveProposal(WalletApi.decodeFromBase58Check(ownerAddress));
+//      System.out.println("approve result:" + isApprove);
+      //delete
+      boolean isDelete = example.deleteProposal(WalletApi.decodeFromBase58Check(ownerAddress));
+      System.out.println("delete result:" + isDelete);
     } catch (Exception e) {
       System.out.println("method execute failed. msg:" + e);
     }
-    System.out.println("method done");
+    System.out.println("proposal issue execute done");
   }
 
   /**
-   * create account
-   *
+   * create proposal
    * @param owner
    * @return
    * @throws Exception
    */
-  public boolean createAccount(byte[] owner) throws Exception {
-    GrpcAPI.EmptyMessage.Builder builder = GrpcAPI.EmptyMessage.newBuilder();
-    GrpcAPI.AddressPrKeyPairMessage pairMessage = rpcCli.generateAddress(builder.build());
-    System.out.println("pairMessage:" + pairMessage);
-    byte[] account = WalletApi.decodeFromBase58Check(pairMessage.getAddress());
-    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createAccount2(generateAccountContract(owner, account));
-
-    boolean valid = validTransaction(transactionExtention);
-    if (!valid) {
-      System.out.println("create account do not valid pass");
+  public boolean createProposal(byte[] owner) throws Exception {
+    ProposalContract.ProposalCreateContract contract = generateProposalContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.proposalCreate(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("create proposal result failed");
       return false;
     }
-    System.out.println("account address:" + pairMessage.getAddress());
-    return signAndBroadcast(transactionExtention.getTransaction());
-  }
-
-  /**
-   * generate account contract
-   *
-   * @param owner
-   * @param account
-   * @return
-   */
-  private AccountContract.AccountCreateContract generateAccountContract(byte[] owner, byte[] account) {
-    AccountContract.AccountCreateContract.Builder builder = AccountContract.AccountCreateContract.newBuilder();
-    builder.setOwnerAddress(ByteString.copyFrom(owner));
-    builder.setAccountAddress(ByteString.copyFrom(account));
-    builder.setType(Protocol.AccountType.Normal);
-    return builder.build();
-  }
-
-
-  /**
-   * update account name
-   * @param owner
-   * @return
-   * @throws Exception
-   */
-  public boolean updateAccount(byte[] owner) throws Exception {
-    AccountContract.AccountUpdateContract contract = generateUpdateAccountContract(owner);
-    GrpcAPI.TransactionExtention transactionExtention = rpcCli.createTransaction2(contract);
-
-    boolean valid = validTransaction(transactionExtention);
-    if (!valid) {
-      System.out.println("update account do not valid pass");
-      return false;
-    }
+    System.out.println("transaction result:" + transactionExtention.getResult());
 
     return signAndBroadcast(transactionExtention.getTransaction());
   }
 
   /**
-   * set account id
+   * approve proposal
    * @param owner
    * @return
    * @throws Exception
    */
-  public boolean setAccountId(byte[] owner) throws Exception {
-    AccountContract.SetAccountIdContract contract = generateSetAccountIdContract(owner);
-    Protocol.Transaction transaction = rpcCli.createTransaction(contract);
+  public boolean approveProposal(byte[] owner) throws Exception {
+    ProposalContract.ProposalApproveContract contract = generateApproveContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.proposalApprove(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("create proposal result failed");
+      return false;
+    }
+    System.out.println("transaction result:" + transactionExtention.getResult());
 
-    return signAndBroadcast(transaction);
+    return signAndBroadcast(transactionExtention.getTransaction());
   }
 
-  private AccountContract.AccountUpdateContract generateUpdateAccountContract(byte[] owner){
-    AccountContract.AccountUpdateContract.Builder builder = AccountContract.AccountUpdateContract.newBuilder();
+  private ProposalContract.ProposalCreateContract generateProposalContract(byte[] owner){
+    Map<Long,Long> params = new HashMap<>();
+    params.put(1L,10000000L);//提议修改账户升级为超级代表的费用
+    ProposalContract.ProposalCreateContract.Builder builder = ProposalContract.ProposalCreateContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
-    builder.setAccountName(ByteString.copyFrom("修改账号名测试".getBytes()));
+    builder.putAllParameters(params);
     return builder.build();
   }
 
-
-  private AccountContract.SetAccountIdContract generateSetAccountIdContract(byte[] owner) {
-    AccountContract.SetAccountIdContract.Builder builder = AccountContract.SetAccountIdContract.newBuilder();
+  private ProposalContract.ProposalApproveContract generateApproveContract(byte[] owner){
+    ProposalContract.ProposalApproveContract.Builder builder = ProposalContract.ProposalApproveContract.newBuilder();
     builder.setOwnerAddress(ByteString.copyFrom(owner));
-    String accountId = "acctount_" + System.currentTimeMillis();
-    builder.setAccountId(ByteString.copyFrom(accountId.getBytes()));
+    builder.setProposalId(12406);
+    builder.setIsAddApproval(true);
+    return builder.build();
+  }
+
+  /**
+   * delete proposal
+   * @param owner
+   * @return
+   * @throws Exception
+   */
+  public boolean deleteProposal(byte[] owner) throws Exception {
+    ProposalContract.ProposalDeleteContract contract = generateDeleteContract(owner);
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.proposalDelete(contract);
+    if(!validTransaction(transactionExtention)){
+      System.out.println("delete proposal result failed");
+      return false;
+    }
+    System.out.println("transaction result:" + transactionExtention.getResult());
+
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private ProposalContract.ProposalDeleteContract generateDeleteContract(byte[] owner){
+    ProposalContract.ProposalDeleteContract.Builder builder = ProposalContract.ProposalDeleteContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setProposalId(12406);
     return builder.build();
   }
 
@@ -155,7 +146,7 @@ public class ContractExample {
   }
 
   /**
-   * 验证返回结果
+   * verify transaction
    *
    * @param transaction
    * @return
@@ -216,5 +207,4 @@ public class ContractExample {
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;
   }
-
 }

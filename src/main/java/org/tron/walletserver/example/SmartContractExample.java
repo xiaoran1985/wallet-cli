@@ -39,8 +39,11 @@ public class SmartContractExample {
 //      boolean isDeployed = example.deployContract(abiStr, byteCode);
 //      System.out.println("deploy result: " + isDeployed);
       //trigger smart contract
-      boolean trigger = example.triggerSumContract();
-      System.out.println("trigger result: " + trigger);
+//      boolean trigger = example.triggerSumContract();
+//      System.out.println("trigger result: " + trigger);
+      //update smart contract
+      boolean update = example.updateSmartContract();
+      System.out.println("update result: " + update);
     } catch (Exception e) {
       System.out.println("failed. msg: " + e);
     }
@@ -148,7 +151,7 @@ public class SmartContractExample {
    * @throws CipherException
    */
   private ECKey getEcKey() throws IOException, CipherException {
-    String priK = "";//clear private key
+    String priK = "1edbbc868af9ac01260e9322c340c1d6ddfc1db972a6e56cb4c4cbf98bc4c4da";//clear private key
     byte[] privateKey = ByteArray.fromHexString(priK);
     ECKey ecKey = ECKey.fromPrivate(privateKey);
     return ecKey;
@@ -246,6 +249,30 @@ public class SmartContractExample {
     builder.setOwnerAddress(ByteString.copyFrom(owner));
     builder.setContractAddress(ByteString.copyFrom(contractAddress));
     builder.setData(ByteString.copyFrom(input));
+    return builder.build();
+  }
+
+  /**
+   * update smart contract
+   * @return
+   * @throws Exception
+   */
+  public boolean updateSmartContract() throws Exception {
+    String contractAddr = "TDR2QbmiN1JqjuK7SvXBrEssHsMThYj4Uu";
+    byte[] contractAddress = WalletApi.decodeFromBase58Check(contractAddr);
+    byte[] owner = WalletApi.decodeFromBase58Check("TTWJb3xRZr7iNRKku4a7aUX2QgmAT7o36F");
+    SmartContractOuterClass.UpdateSettingContract contract = generateUpdateSettingContract(owner,contractAddress);
+
+    GrpcAPI.TransactionExtention transactionExtention = rpcCli.updateSetting(contract);
+
+    return signAndBroadcast(transactionExtention.getTransaction());
+  }
+
+  private SmartContractOuterClass.UpdateSettingContract generateUpdateSettingContract(byte[] owner, byte[] contractAddress){
+    SmartContractOuterClass.UpdateSettingContract.Builder builder = SmartContractOuterClass.UpdateSettingContract.newBuilder();
+    builder.setOwnerAddress(ByteString.copyFrom(owner));
+    builder.setContractAddress(ByteString.copyFrom(contractAddress));
+    builder.setConsumeUserResourcePercent(55);
     return builder.build();
   }
 }
